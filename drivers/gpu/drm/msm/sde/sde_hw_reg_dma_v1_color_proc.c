@@ -1165,6 +1165,7 @@ void reg_dmav1_setup_dspp_pa_hsicv17(struct sde_hw_dspp *ctx, void *cfg)
 {
 	struct sde_hw_cp_cfg *hw_cfg = cfg;
 	struct sde_hw_kcal *kcal = sde_hw_kcal_get();
+
 	u32 opcode = 0;
 	int rc;
 
