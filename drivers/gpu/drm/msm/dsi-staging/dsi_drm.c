@@ -365,7 +365,21 @@ static void dsi_bridge_post_disable(struct drm_bridge *bridge)
 	SDE_ATRACE_END("dsi_bridge_post_disable");
 
 	drm_notifier_call_chain(DRM_EVENT_BLANK, &g_notify_data);
+
 }
+
+#if CONFIG_TOUCHSCREEN_COMMON
+typedef int(*touchpanel_recovery_cb_p_t)(void);
+static touchpanel_recovery_cb_p_t touchpanel_recovery_cb_p;
+int set_touchpanel_recovery_callback(touchpanel_recovery_cb_p_t cb)
+{
+	if (IS_ERR_OR_NULL(cb))
+		return -EINVAL;
+	touchpanel_recovery_cb_p = cb;
+	return 0;
+}
+EXPORT_SYMBOL(set_touchpanel_recovery_callback);
+#endif
 
 static void dsi_bridge_mode_set(struct drm_bridge *bridge,
 				struct drm_display_mode *mode,
