@@ -2,14 +2,17 @@
 # SPDX-License-Identifier: Apache-2.0
 # Automation script for Building Kernels on Github Actions
 
-# Clone the repositories
-mkdir Neutron/
+# Download latest Neutron clang from their repos.
+mkdir -p Neutron/
 curl -s https://api.github.com/repos/Neutron-Toolchains/clang-build-catalogue/releases/latest \
 | grep "browser_download_url.*tar.zst" \
 | cut -d : -f 2,3 \
 | tr -d \" \
-| wget -qi -
-tar -xf *.tar.zst -C Neutron/ | exit 1
+| wget --output-document=Neutron.tar.zst --show-progress -qi -
+
+tar -xf Neutron.tar.zst -C Neutron/ | exit 1
+
+# Clone dependant repositories
 # git clone --depth 1 -b gcc-master https://github.com/mvaisakh/gcc-arm64.git gcc-arm64
 # git clone --depth 1 -b gcc-master https://github.com/mvaisakh/gcc-arm.git gcc-arm
 git clone --depth 1 -b surya https://github.com/taalojarvi/AnyKernel3 | exit 1
@@ -18,7 +21,7 @@ git clone --depth 1 https://github.com/Stratosphere-Kernel/Stratosphere-Canaries
 # Workaround for safe.directory permission fix
 git config --global safe.directory "$GITHUB_WORKSPACE"
 git config --global safe.directory /github/workspace
-git config --global --add safe.directory /__w/kernel_xiaomi_surya/kernel_xiaomi_surya
+git config --global --add safe.directory /__w/android_kernel_xiaomi_surya/android_kernel_xiaomi_surya
 
 # Export Environment Variables. 
 export DATE=$(date +"%d-%m-%Y-%I-%M")
@@ -33,14 +36,14 @@ export CROSS_COMPILE=aarch64-linux-gnu-
 # export CROSS_COMPILE_COMPAT=arm-linux-gnueabi-
 export LD_LIBRARY_PATH=$TC_DIR/lib
 export KBUILD_BUILD_USER="taalojarvi"
-export KBUILD_BUILD_HOST="Github Actions"
+export KBUILD_BUILD_HOST="github.com"
 export USE_HOST_LEX=yes
 export KERNEL_IMG=output/arch/arm64/boot/Image
 export KERNEL_DTBO=output/arch/arm64/boot/dtbo.img
 export KERNEL_DTB=output/arch/arm64/boot/dts/qcom/sdmmagpie.dtb
 export DEFCONFIG=surya_defconfig
 export ANYKERNEL_DIR=$(pwd)/AnyKernel3/
-export BUILD_NUMBER=$((GITHUB_RUN_NUMBER + 344))
+export BUILD_NUMBER=$((GITHUB_RUN_NUMBER + 424))
 export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
 
 # Telegram API Stuff
@@ -82,7 +85,8 @@ tg_post_build() {
 
 ##----------------------------------------------------------##
 
-# Create Release Notes
+# Create Release Notes [Deprecated] 
+function releasenotes(){
 touch releasenotes.md
 echo -e "This is an Automated Build of Stratosphere Kernel. Flash at your own risk!" > releasenotes.md
 echo -e >> releasenotes.md
@@ -95,6 +99,7 @@ echo -e >> releasenotes.md
 echo -e "Last 5 Commits before Build:-" >> releasenotes.md
 git log --decorate=auto --pretty=reference --graph -n 10 >> releasenotes.md
 cp releasenotes.md $(pwd)/Stratosphere-Canaries/
+}
 
 # Make defconfig
 # make $DEFCONFIG LD=aarch64-elf-ld.lld O=output/
