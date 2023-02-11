@@ -8,15 +8,15 @@ curl -s https://api.github.com/repos/Neutron-Toolchains/clang-build-catalogue/re
 | grep "browser_download_url.*tar.zst" \
 | cut -d : -f 2,3 \
 | tr -d \" \
-| wget --output-document=Neutron.tar.zst --show-progress -qi -
+| wget --output-document=Neutron.tar.zst -qi -
 
-tar -xf Neutron.tar.zst -C Neutron/ | exit 1
+tar -xf Neutron.tar.zst -C Neutron/ || exit 1
 
 # Clone dependant repositories
 # git clone --depth 1 -b gcc-master https://github.com/mvaisakh/gcc-arm64.git gcc-arm64
 # git clone --depth 1 -b gcc-master https://github.com/mvaisakh/gcc-arm.git gcc-arm
-git clone --depth 1 -b surya https://github.com/taalojarvi/AnyKernel3 | exit 1
-git clone --depth 1 https://github.com/Stratosphere-Kernel/Stratosphere-Canaries | exit 1
+git clone --depth 1 -b surya https://github.com/taalojarvi/AnyKernel3 || exit 1
+git clone --depth 1 https://github.com/Stratosphere-Kernel/Stratosphere-Canaries || exit 1
 
 # Workaround for safe.directory permission fix
 git config --global safe.directory "$GITHUB_WORKSPACE"
