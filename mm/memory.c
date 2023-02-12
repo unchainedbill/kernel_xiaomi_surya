@@ -70,7 +70,6 @@
 #include <linux/userfaultfd_k.h>
 #include <linux/dax.h>
 #include <linux/oom.h>
-#include <linux/mm_inline.h>
 
 #include <asm/io.h>
 #include <asm/mmu_context.h>
@@ -478,7 +477,7 @@ static void free_pte_range(struct mmu_gather *tlb, pmd_t *pmd,
 	pgtable_t token = pmd_pgtable(*pmd);
 	pmd_clear(pmd);
 	pte_free_tlb(tlb, token, addr);
-	mm_dec_nr_ptes(tlb->mm);
+	atomic_long_dec(&tlb->mm->nr_ptes);
 }
 
 static inline void free_pmd_range(struct mmu_gather *tlb, pud_t *pud,
@@ -579,7 +578,6 @@ static inline void free_p4d_range(struct mmu_gather *tlb, pgd_t *pgd,
 	p4d = p4d_offset(pgd, start);
 	pgd_clear(pgd);
 	p4d_free_tlb(tlb, p4d, start);
-	mm_dec_nr_puds(tlb->mm);
 }
 
 /*
@@ -710,7 +708,7 @@ int __pte_alloc(struct mm_struct *mm, pmd_t *pmd, unsigned long address)
 
 	ptl = pmd_lock(mm, pmd);
 	if (likely(pmd_none(*pmd))) {	/* Has another populated it ? */
-		mm_inc_nr_ptes(mm);
+		atomic_long_inc(&mm->nr_ptes);
 		pmd_populate(mm, pmd, new);
 		new = NULL;
 	}
@@ -3146,21 +3144,6 @@ void unmap_mapping_range(struct address_space *mapping,
 }
 EXPORT_SYMBOL(unmap_mapping_range);
 
-static void lru_gen_swap_refault(struct page *page, swp_entry_t entry)
-{
-	if (lru_gen_enabled()) {
-		void *item;
-		struct address_space *mapping = swap_address_space(entry);
-		pgoff_t index = swp_offset(entry);
-
-		rcu_read_lock();
-		item = radix_tree_lookup(&mapping->page_tree, index);
-		rcu_read_unlock();
-		if (radix_tree_exceptional_entry(item))
-			lru_gen_refault(page, item);
-	}
-}
-
 /*
  * We enter with non-exclusive mmap_sem (to exclude vma changes,
  * but allow concurrent faults), and pte mapped but not yet locked.
@@ -3242,7 +3225,6 @@ int do_swap_page(struct vm_fault *vmf)
 				__SetPageLocked(page);
 				__SetPageSwapBacked(page);
 				set_page_private(page, entry.val);
-				lru_gen_swap_refault(page, entry);
 				lru_cache_add_anon(page);
 				swap_readpage(page, true);
 			}
@@ -3634,7 +3616,7 @@ static int pte_alloc_one_map(struct vm_fault *vmf)
 			goto map_pte;
 		}
 
-		mm_inc_nr_ptes(vma->vm_mm);
+		atomic_long_inc(&vma->vm_mm->nr_ptes);
 		pmd_populate(vma->vm_mm, vmf->pmd, vmf->prealloc_pte);
 		spin_unlock(vmf->ptl);
 		vmf->prealloc_pte = NULL;
@@ -3694,7 +3676,7 @@ static void deposit_prealloc_pte(struct vm_fault *vmf)
 	 * We are going to consume the prealloc table,
 	 * count that as nr_ptes.
 	 */
-	mm_dec_nr_ptes(vma->vm_mm);
+	atomic_long_inc(&vma->vm_mm->nr_ptes);
 	vmf->prealloc_pte = NULL;
 }
 
@@ -4710,9 +4692,9 @@ int __handle_speculative_fault(struct mm_struct *mm, unsigned long address,
 		return VM_FAULT_RETRY;
 	}
 
-	task_enter_user_fault();
+	mem_cgroup_enter_user_fault();
 	ret = handle_pte_fault(&vmf);
-	task_exit_user_fault();
+	mem_cgroup_exit_user_fault();
 
 	/*
 	 * If there is no need to retry, don't return the vma to the caller.
@@ -4797,7 +4779,7 @@ int handle_mm_fault(struct vm_area_struct *vma, unsigned long address,
 	 * space.  Kernel faults are handled more gracefully.
 	 */
 	if (flags & FAULT_FLAG_USER)
-		task_enter_user_fault();
+		mem_cgroup_enter_user_fault();
 
 	if (unlikely(is_vm_hugetlb_page(vma)))
 		ret = hugetlb_fault(vma->vm_mm, vma, address, flags);
@@ -4805,7 +4787,7 @@ int handle_mm_fault(struct vm_area_struct *vma, unsigned long address,
 		ret = __handle_mm_fault(vma, address, flags);
 
 	if (flags & FAULT_FLAG_USER) {
-		task_exit_user_fault();
+		mem_cgroup_exit_user_fault();
 		/*
 		 * The task may have entered a memcg OOM situation but
 		 * if the allocation error was handled gracefully (no
@@ -4858,21 +4840,15 @@ int __pud_alloc(struct mm_struct *mm, p4d_t *p4d, unsigned long address)
 
 	spin_lock(&mm->page_table_lock);
 #ifndef __ARCH_HAS_5LEVEL_HACK
-	if (p4d_present(*p4d)) {
-		/* Another has populated it */
+	if (p4d_present(*p4d))		/* Another has populated it */
 		pud_free(mm, new);
-	} else {
-		mm_inc_nr_puds(mm);
+	else
 		p4d_populate(mm, p4d, new);
-	}
 #else
-	if (pgd_present(*p4d)) {
-		/* Another has populated it */
+	if (pgd_present(*p4d))		/* Another has populated it */
 		pud_free(mm, new);
-	} else {
-		mm_inc_nr_puds(mm);
+	else
 		pgd_populate(mm, p4d, new);
-	}
 #endif /* __ARCH_HAS_5LEVEL_HACK */
 	spin_unlock(&mm->page_table_lock);
 	return 0;
