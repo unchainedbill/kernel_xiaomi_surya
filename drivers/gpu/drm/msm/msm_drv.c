@@ -786,7 +786,6 @@ static int msm_drm_init(struct device *dev, struct drm_driver *drv)
 		priv->disp_thread[i].crtc_id = priv->crtcs[i]->base.id;
 		kthread_init_worker(&priv->disp_thread[i].worker);
 		priv->disp_thread[i].dev = ddev;
-<<<<<<< HEAD
 		/* Only pin actual display thread to big cluster */
 		if (i == 0) {
 			priv->disp_thread[i].thread =
@@ -875,8 +874,8 @@ static int msm_drm_init(struct device *dev, struct drm_driver *drv)
 	 * other important events.
 	 */
 	kthread_init_worker(&priv->pp_event_worker);
-	priv->pp_event_thread = kthread_run_perf_critical(cpu_perf_mask,
-			kthread_worker_fn, &priv->pp_event_worker, "pp_event");
+	priv->pp_event_thread = kthread_run(kthread_worker_fn,
+			&priv->pp_event_worker, "pp_event");
 
 	ret = sched_setscheduler(priv->pp_event_thread,
 						SCHED_FIFO, &param);

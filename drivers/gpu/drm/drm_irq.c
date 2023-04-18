@@ -101,7 +101,11 @@
 int drm_irq_install(struct drm_device *dev, int irq)
 {
 	int ret;
+<<<<<<< HEAD
 	unsigned long sh_flags = IRQF_PERF_DRM_AFFINE;
+=======
+	unsigned long sh_flags = 0;
+>>>>>>> parent of 8f6ce5802d0a (drm: affine IRQs to perf cluster)
 
 	if (!drm_core_check_feature(dev, DRIVER_HAVE_IRQ))
 		return -EINVAL;
