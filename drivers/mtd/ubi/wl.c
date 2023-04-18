@@ -1282,6 +1282,7 @@ retry:
 	spin_lock(&ubi->wl_lock);
 	e = ubi->lookuptbl[pnum];
 	e->sqnum = UBI_UNKNOWN;
+
 	if (!e) {
 		/*
 		 * This wl entry has been removed for some errors by other
