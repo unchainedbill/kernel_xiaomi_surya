@@ -45,13 +45,6 @@ export DEFCONFIG=surya_defconfig
 export ANYKERNEL_DIR=$(pwd)/AnyKernel3/
 export BUILD_NUMBER=$((GITHUB_RUN_NUMBER + 424))
 export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
-export SYSMEM="$(vmstat -s | grep -i 'total memory' | sed 's/ *//')
-if [ "$(cat /sys/devices/system/cpu/smt/active)" = "1" ]; then
-		export THREADS=$(($(nproc --all) * 2))
-	else
-		export THREADS=$(nproc --all)
-	fi
-##---------------------------------------------------------##
 
 # Telegram API Stuff
 BUILD_START=$(date +"%s")
@@ -61,6 +54,12 @@ BOT_BUILD_URL="https://api.telegram.org/bot$token/sendDocument"
 CHATID=-1001719821334
 COMMIT_HEAD=$(git log --oneline -1)
 TERM=xterm
+if [ "$(cat /sys/devices/system/cpu/smt/active)" = "1" ]; then
+		export THREADS=$(($(nproc --all) * 2))
+	else
+		export THREADS=$(nproc --all)
+	fi
+##---------------------------------------------------------##
 
 tg_post_msg() {
 	curl -s -X POST "$BOT_MSG_URL" -d chat_id="$CHATID" \
@@ -107,7 +106,6 @@ cp releasenotes.md $(pwd)/Stratosphere-Canaries/
 make $DEFCONFIG -j$THREADS CC=clang LD=ld.lld AS=llvm-as AR=llvm-ar NM=llvm-nm OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump STRIP=llvm-strip O=output/
 
 # Make Kernel
-echo The system has $SYSMEM
 echo Using $THREADS jobs for this build... 
 tg_post_msg "<b> Build Started on Github Actions</b>%0A<b>Build Number: </b><code>"$BUILD_NUMBER"</code>%0A<b>Date : </b><code>$(TZ=Etc/UTC date)</code>%0A<b>Top Commit : </b><code>$COMMIT_HEAD</code>%0A"
 # make -j$THREADS LD=ld.lld O=output/
