@@ -15,7 +15,7 @@ tar -xf Neutron.tar.zst -C Neutron/ || exit 1
 # Clone dependant repositories
 # git clone --depth 1 -b gcc-master https://github.com/mvaisakh/gcc-arm64.git gcc-arm64
 # git clone --depth 1 -b gcc-master https://github.com/mvaisakh/gcc-arm.git gcc-arm
-git clone --depth 1 -b surya https://github.com/taalojarvi/AnyKernel3 || exit 1
+git clone --depth 1 -b surya https://github.com/ookiineko/AnyKernel3 || exit 1
 git clone --depth 1 https://github.com/Stratosphere-Kernel/Stratosphere-Canaries || exit 1
 
 # Workaround for safe.directory permission fix
@@ -35,7 +35,7 @@ export CROSS_COMPILE=aarch64-linux-gnu-
 # export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
 # export CROSS_COMPILE_COMPAT=arm-linux-gnueabi-
 export LD_LIBRARY_PATH=$TC_DIR/lib
-export KBUILD_BUILD_USER="David112x"
+export KBUILD_BUILD_USER="ookiineko"
 export KBUILD_BUILD_HOST="$(hostname)"
 export USE_HOST_LEX=yes
 export KERNEL_IMG=output/arch/arm64/boot/Image
@@ -57,7 +57,7 @@ BUILD_START=$(date +"%s")
 KBUILD_COMPILER_STRING=$("$TC_DIR"/bin/clang --version | head -n 1 | perl -pe 's/\(http.*?\)//gs' | sed -e 's/  */ /g' -e 's/[[:space:]]*$//')
 BOT_MSG_URL="https://api.telegram.org/bot$token/sendMessage"
 BOT_BUILD_URL="https://api.telegram.org/bot$token/sendDocument"
-CHATID=-1001719821334
+CHATID=$my_chatid_string
 COMMIT_HEAD=$(git log --oneline -1)
 TERM=xterm
 
